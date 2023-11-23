@@ -1,5 +1,4 @@
 # Installation
-### Create the conda env with the dependencies
 1. create conda env
 ```
 conda create -n ENVNAME
