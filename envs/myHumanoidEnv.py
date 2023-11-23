@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import cv2
 from matplotlib import pyplot as plt
 from vlmReward import CLIP
@@ -269,7 +270,7 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
             )
 
         MujocoEnv.__init__(
-            self, "/media/rg413/dave/RL/RLFP/envs/humanoid_textured.xml", 5, observation_space=observation_space, **kwargs
+            self, os.path.join(os.path.dirname(os.path.realpath(__file__)), "humanoid_textured.xml"), 5, observation_space=observation_space, **kwargs
         )
 
         # init vlm
