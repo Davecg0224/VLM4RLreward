@@ -25,6 +25,4 @@ conda create -n ENVNAME
 - `vlmReward.py` is used to get the similarity score. Also can be used to evaluate the score from specific text and input video
 - `envs/myHumannoidEnv.py` is a customized gym env with an additional VLM reward
 - `envs/humanoid_textured.xml` refers to [vlmrm](https://github.com/AlignmentResearch/vlmrm) which can modify texture
-> [!WARNING]
-> the path of `humanoid_textured.xml` inside the `myHumanoidEnv.py` should be modified based on your own path 
 
