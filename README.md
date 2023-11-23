@@ -21,7 +21,7 @@ conda create -n ENVNAME
 # Usage
 - `train.py` is used to train and save a robot motion policy
 - `eval.py` is used to evaluate the trained policy by rendering
-- `vlmReward.py` is used to get the similarity score. Also can be used to evaluate the score from specific text and input video
+- `vlmReward.py` is used to get the similarity score. Also can be used to evaluate the score from a specific text and an input video
 - `envs/myHumannoidEnv.py` is a customized gym env with an additional VLM reward
 - `envs/humanoid_textured.xml` refers to [vlmrm](https://github.com/AlignmentResearch/vlmrm) which can modify texture
 
