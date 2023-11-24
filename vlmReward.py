@@ -8,7 +8,8 @@ class CLIP():
     def __init__(self, model_version = "ViT-L/14", actionText = ["walking"]):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model, self.preprocess = clip.load(model_version, device=self.device)
-        self.text = clip.tokenize(actionText).to(self.device)
+        # self.text = clip.tokenize(actionText).to(self.device)
+        self.text = torch.cat([clip.tokenize(f"a human is {c}") for c in actionText]).to(self.device)
 
     def CLIPprocess(self, image):
         with torch.no_grad():
@@ -27,7 +28,8 @@ if __name__ == "__main__":
 
     # select VLM and model version
     # CLIP: ViT-B/16, ViT-L/14, ViT-L/14@336px
-    vlm = CLIP(model_version = "ViT-L/14", actionText = ["walking"])
+    vlm = CLIP(model_version = 'ViT-L/14', actionText=["walking"])
+
     cap = cv2.VideoCapture('./videos/walking_human.mp4')
     totalScore = 0
     i = 0

@@ -6,6 +6,7 @@ from sb3_contrib import TQC
 import numpy as np
 from collections import Counter
 import matplotlib.pyplot as plt
+
 register(
     id='vlmHuman-v0',
     entry_point='envs:VLMHumanoidEnv',
@@ -30,7 +31,7 @@ def evaluation(env, model, render_last, eval_num=100):
 
 
 if __name__ == "__main__":
-    model_path = "models/TQC/3e-05_80"  # Change path name to load different modelsE
+    model_path = "models/TQC/3e-05_80"  # Change path to load different models
     env = gym.make('vlmHuman-v0', render_mode="human")
 
     ### Load model with SB3

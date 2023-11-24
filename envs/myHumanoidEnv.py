@@ -234,6 +234,8 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
         healthy_z_range=(1.0, 2.0),
         reset_noise_scale=1e-2,
         exclude_current_positions_from_observation=True,
+        actionText = ["walking"],
+        onlyVLMreward = True,
         **kwargs
     ):
         utils.EzPickle.__init__(
@@ -245,6 +247,8 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
             healthy_z_range,
             reset_noise_scale,
             exclude_current_positions_from_observation,
+            actionText,
+            onlyVLMreward = True,
             **kwargs
         )
 
@@ -259,6 +263,8 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
         self._exclude_current_positions_from_observation = (
             exclude_current_positions_from_observation
         )
+        self.actionText = actionText
+        self.onlyVLMreward = onlyVLMreward
 
         if exclude_current_positions_from_observation:
             observation_space = Box(
@@ -274,7 +280,7 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
         )
 
         # init vlm
-        self.vlm = CLIP(actionText = ["walking"])
+        self.vlm = CLIP(actionText=self.actionText)
 
     @property
     def healthy_reward(self):
@@ -326,29 +332,28 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
     def step(self, action):
         xy_position_before = mass_center(self.model, self.data)
         self.do_simulation(action, self.frame_skip)
-        xy_position_after = mass_center(self.model, self.data)
 
-        xy_velocity = (xy_position_after - xy_position_before) / self.dt
-        x_velocity, y_velocity = xy_velocity
-
-        ctrl_cost = self.control_cost(action)
-
-        forward_reward = self._forward_reward_weight * x_velocity
-        healthy_reward = self.healthy_reward
-
-        rewards = forward_reward + healthy_reward
-
-        observation = self._get_obs()
-        reward = rewards - ctrl_cost
-        terminated = self.terminated
-
-        # for VLM reward
+        # render image for VLM reward
         img = self.mujoco_renderer.render(render_mode = "rgb_array", camera_id = 0)
-        # cv2.imshow("img", cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
-        # cv2.waitKey(1)
-        reward += self.vlm.getScore(img)
 
-        info = {
+        if self.onlyVLMreward:
+            reward = self.vlm.getScore(img)
+            info = {}
+
+        else:
+            xy_position_after = mass_center(self.model, self.data)
+            xy_velocity = (xy_position_after - xy_position_before) / self.dt
+            x_velocity, y_velocity = xy_velocity
+
+            ctrl_cost = self.control_cost(action)
+
+            forward_reward = self._forward_reward_weight * x_velocity
+            healthy_reward = self.healthy_reward
+
+            reward = forward_reward + healthy_reward - ctrl_cost
+            reward += self.vlm.getScore(img)
+
+            info = {
             "reward_linvel": forward_reward,
             "reward_quadctrl": -ctrl_cost,
             "reward_alive": healthy_reward,
@@ -359,7 +364,10 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
             "y_velocity": y_velocity,
             "forward_reward": forward_reward,
             "vlm_reward": self.vlm.getScore(img),
-        }
+            }
+
+        observation = self._get_obs()
+        terminated = self.terminated
 
         if self.render_mode == "human":
             self.render()

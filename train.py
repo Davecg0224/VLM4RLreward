@@ -17,7 +17,7 @@ register(
 
 # Set hyper params (configurations) for training
 my_config = {
-    "run_id": "walking",
+    "run_id": "squating down",
 
     "algorithm": TQC,
     "policy_network": "MlpPolicy",
@@ -28,7 +28,7 @@ my_config = {
     "entropy_coef": 'auto',
     "learning_starts": 100,
 
-    "epoch_num": 200,
+    "epoch_num": 100,
     "timesteps_per_epoch": 20000,
     "eval_episode_num": 10,
     "eval_freq": 10
@@ -36,6 +36,7 @@ my_config = {
 
 def make_env():
     # env = gym.make('Humanoid-v4', render_mode='human')
+    # env = gym.make('vlmHuman-v0', actionText=[my_config["run_id"]])
     env = gym.make('vlmHuman-v0')
     return env
 
@@ -57,8 +58,8 @@ def train(env, model, config):
         )
 
         ### Evaluation
-        if epoch % config["eval_freq"] == 0:
-            # print(config["run_id"])
+        if epoch % config["eval_freq"] == 0 or epoch == config["epoch_num"] - 1:
+            print(config["run_id"])
             print("Epoch: ", epoch)
             avg_reward = 0
             for seed in range(config["eval_episode_num"]):
@@ -94,7 +95,7 @@ def train(env, model, config):
             print("---------------")
 
 if __name__ == "__main__":
-
+    print(my_config["run_id"])
     # Create wandb session (Uncomment to enable wandb logging)
     # run = wandb.init(
     #     project="assignment_3",
@@ -118,7 +119,7 @@ if __name__ == "__main__":
         ent_coef = my_config["entropy_coef"],
         use_sde_at_warmup=True,
         verbose=0,
-        tensorboard_log=my_config["run_id"],
+        # tensorboard_log=my_config["run_id"],
         device='auto'
     )
     train(env, model, my_config)
