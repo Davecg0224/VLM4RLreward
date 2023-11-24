@@ -35,9 +35,7 @@ my_config = {
 }
 
 def make_env():
-    # env = gym.make('Humanoid-v4', render_mode='human')
-    # env = gym.make('vlmHuman-v0', actionText=[my_config["run_id"]])
-    env = gym.make('vlmHuman-v0')
+    env = gym.make('vlmHuman-v0', actionText=[my_config["run_id"]])
     return env
 
 def train(env, model, config):
@@ -90,7 +88,7 @@ def train(env, model, config):
                 current_best = avg_reward
                 save_path = config["save_path"]
                 algo_name, lr = config["algorithm"].__name__, config["learning_rate"]
-                model.save(f"{save_path}/{algo_name}/{lr}_{epoch}")
+                model.save(f"{save_path}/{my_config['run_id']}/{algo_name}/{lr}_{epoch}")
 
             print("---------------")
 
