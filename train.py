@@ -35,7 +35,7 @@ my_config = {
 }
 
 def make_env():
-    env = gym.make('vlmHuman-v0', actionText=[my_config["run_id"]])
+    env = gym.make('vlmHuman-v0', healthy_z_range = (0.0, 2.0), actionText=[my_config["run_id"]])
     return env
 
 def train(env, model, config):
