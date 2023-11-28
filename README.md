@@ -15,8 +15,8 @@ conda create -n ENVNAME
 
   * Others
   ```
-  conda install -c conda-forge gym gym-mujoco stable-baselines3
-  conda install -c anaconda opencv
+  conda install -c conda-forge gym stable-baselines3 opencv
+  pip install sb3-contrib gym[mujoco]
   ```
 # Usage
 - `train.py` is used to train and save a robot motion policy
