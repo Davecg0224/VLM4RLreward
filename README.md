@@ -4,19 +4,17 @@
 conda create -n ENVNAME
 ```
 2. install required dependencies
-  * VLM-related: follow the instructions from [CLIP](https://github.com/openai/CLIP)
+  * VLM-related: follow the instructions from [LAVIS](https://github.com/salesforce/LAVIS)
   ```
   conda install --yes -c pytorch pytorch=1.7.1 torchvision cudatoolkit=11.0
-  pip install ftfy regex tqdm
-  pip install git+https://github.com/openai/CLIP.git
+  pip install salesforce-lavis
   ```
 > [!NOTE]
 > Replace `cudatoolkit=11.0` to match your machine's cuda version
 
   * Others
   ```
-  conda install -c conda-forge gym stable-baselines3 opencv
-  pip install sb3-contrib gym[mujoco]
+  pip install stable-baselines3 sb3-contrib gym gym[mujoco]
   ```
 # Usage
 - `train.py` is used to train and save a robot motion policy
