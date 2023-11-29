@@ -1,9 +1,8 @@
 import torch
-# import clip
 import cv2
 from PIL import Image
 import time 
-from gpt import GPT
+# from gpt import GPT
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -40,18 +39,21 @@ class VLM():
 
 if __name__ == "__main__":
 
-    action = "doing the squat"
-    prompts = [
-        f"Break down the action into just two subsequential poses that must be achieved to complete the action.\n\
-        Assume the intitial pose is standing. Just list the them without any comments.\n\
-        action: jumping jacks \n\
-        subposes: Arms and legs spread wide, forming an X shape / Arms and legs brought back together at the midline, with feet together and arms at the sides \n\
-        action: doing the squat \n\
-        subposes:"  
-    ]
-    # select LLM
-    llm = GPT(model="gpt-3.5-turbo-instruct")
-    actionList = llm.complete(prompts).split("/")
+    # action = "doing the squat"
+    # prompts = [
+    #     f"Break down the action into just two subsequential poses that must be achieved to complete the action.\n\
+    #     Assume the intitial pose is standing. Just list the them without any comments.\n\
+    #     action: jumping jacks \n\
+    #     subposes: Arms and legs spread wide, forming an X shape / Arms and legs brought back together at the midline, with feet together and arms at the sides \n\
+    #     action: doing the squat \n\
+    #     subposes:"  
+    # ]
+    # # select LLM
+    # llm = GPT(model="gpt-3.5-turbo-instruct")
+    # actionList = llm.complete(prompts).split("/")
+    actionList = ["Squatting down with knees bent and arms extended in front",
+                  "Standing back up with legs straight and arms at the sides"
+                ]
 
     # select VLM and model version
     # print(model_zoo) to check for available models
