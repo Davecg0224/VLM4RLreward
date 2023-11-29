@@ -2,15 +2,16 @@ import gymnasium as gym
 from gymnasium.envs.registration import register
 from stable_baselines3 import PPO, A2C, SAC, TD3
 from sb3_contrib import TQC
+from train import my_config, make_env
 
 import numpy as np
 from collections import Counter
 import matplotlib.pyplot as plt
 
-register(
-    id='vlmHuman-v0',
-    entry_point='envs:VLMHumanoidEnv',
-)
+# register(
+#     id='vlmHuman-v0',
+#     entry_point='envs:VLMHumanoidEnv',
+# )
 
 def evaluation(env, model, render_last, eval_num=100):
     Reward = []
@@ -31,12 +32,17 @@ def evaluation(env, model, render_last, eval_num=100):
 
 
 if __name__ == "__main__":
-    model_path = "models/TQC/3e-05_80"  # Change path to load different models
-    env = gym.make('vlmHuman-v0', render_mode="human")
+    task, algo_name, lr = my_config['run_id'], my_config["algorithm"].__name__, my_config["learning_rate"]
+    model_path = f"models/{task}/{algo_name}/3e-05_80"  # Change path to load different models
+    
+    env = gym.make('vlmHuman-v0', 
+                   healthy_z_range=(0.5, 2.0), 
+                   actionText=["Squatting down with knees bent and arms extended in front"], 
+                   render_mode="human"
+                )
 
     ### Load model with SB3
-    modelName = TQC
-    model = modelName.load(model_path)
+    model = my_config["algorithm"].load(model_path)
     
     eval_num = 10
     Reward = evaluation(env, model, True, eval_num)

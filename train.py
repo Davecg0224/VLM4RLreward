@@ -28,14 +28,17 @@ my_config = {
     "entropy_coef": 'auto',
     "learning_starts": 100,
 
-    "epoch_num": 100,
-    "timesteps_per_epoch": 20000,
+    "epoch_num": 200,
+    "timesteps_per_epoch": 10000,
     "eval_episode_num": 10,
     "eval_freq": 10
 }
 
 def make_env():
-    env = gym.make('vlmHuman-v0', healthy_z_range = (0.0, 2.0), actionText=[my_config["run_id"]])
+    env = gym.make('vlmHuman-v0', 
+                   healthy_z_range=(0.5, 2.0), 
+                   actionText=["Squatting down with knees bent and arms extended in front"],
+                )
     return env
 
 def train(env, model, config):
@@ -93,7 +96,7 @@ def train(env, model, config):
             print("---------------")
 
 if __name__ == "__main__":
-    print(my_config["run_id"])
+    # print(my_config["run_id"])
     # Create wandb session (Uncomment to enable wandb logging)
     # run = wandb.init(
     #     project="assignment_3",
