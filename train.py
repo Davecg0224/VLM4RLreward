@@ -7,20 +7,33 @@ from gymnasium.envs.registration import register
 
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecVideoRecorder
+from stable_baselines3.common.utils import constant_fn, get_linear_fn
 from stable_baselines3 import A2C, DDPG, DQN, PPO, SAC, TD3
 from sb3_contrib import TQC
+from sb3_contrib.tqc.policies import MlpPolicy, TQCPolicy
+
+import numpy as np
 
 register(
     id='vlmHuman-v0',
     entry_point='envs:VLMHumanoidEnv',
 )
 
+# Set camera configuration for the viewpoint
+DEFAULT_CAMERA_CONFIG = {
+    "trackbodyid": 1,
+    "distance": 3.5,
+    "lookat": np.array((0.0, 0.0, 1.0)),
+    "elevation": -10.0,
+    "azimuth": 120.0,
+}
+
 # Set hyper params (configurations) for training
 my_config = {
     "run_id": "squating down",
 
     "algorithm": TQC,
-    "policy_network": "MlpPolicy",
+    "policy_network": MlpPolicy,
     "save_path": "models",
 
     "learning_rate": 3e-5,
@@ -36,8 +49,10 @@ my_config = {
 
 def make_env():
     env = gym.make('vlmHuman-v0', 
-                   healthy_z_range=(0.5, 2.0), 
+                   healthy_z_range=(0.45, 2.0), 
                    actionText=["Squatting down with knees bent and arms extended in front"],
+                   camera_config=DEFAULT_CAMERA_CONFIG,
+                #    render_mode="human",
                 )
     return env
 
@@ -106,7 +121,7 @@ if __name__ == "__main__":
     # )
 
     env = DummyVecEnv([make_env])
-
+    
     # Create model from loaded config and train
     # Note: Set verbose to 0 if you don't want info messages
     model = my_config["algorithm"](
