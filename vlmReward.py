@@ -2,7 +2,7 @@ import torch
 import cv2
 from PIL import Image
 import time 
-# from gpt import GPT
+# from gpt import GPTh
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -16,6 +16,7 @@ class VLM():
                                                                 model_type = model_version, 
                                                                 is_eval=True,
                                                                 device=self.device)
+        # actionText.append("not squatung and not standing")
         # actionText.append("doing nothing")
         self.text = [self.txt_processors["eval"](f"a human is {c}") for c in actionText]
 
@@ -30,15 +31,15 @@ class VLM():
             features_text = clip_features.text_embeds_proj
             similarity = (features_image @ features_text.t())[0].detach().cpu().numpy()
             # # [-1, 1] scaled to [0, 1]
-            score = (similarity + 1) / 2
-            return score
+            # score = (similarity + 1) / 2
+            return similarity
         
         features_image = self.model.extract_features(sample, mode="image")
         features_text = self.model.extract_features(sample, mode="text")
         similarity = (features_image.image_embeds_proj[:,0,:] @ features_text.text_embeds_proj[:,0,:].t())[0].cpu().numpy()
         # [-1, 1] scaled to [0, 1]
-        score = (similarity + 1) / 2
-        return score
+        # score = (similarity + 1) / 2
+        return similarity
 
 if __name__ == "__main__":
     # # select LLM
@@ -66,7 +67,7 @@ if __name__ == "__main__":
               actionText=actionList
             )
 
-    cap = cv2.VideoCapture('./videos/squat.mp4')
+    cap = cv2.VideoCapture('./videos/squating_blip_short.mp4')
     totalScore = []
     stTime = time.time()
     while cap.isOpened():
@@ -88,7 +89,7 @@ if __name__ == "__main__":
     plt.xlabel("Frame")
     plt.ylabel("Similarity Score")
     plt.title("Similarity Score of each frame")
-    plt.savefig("similarity.png")
+    plt.savefig("similarity_ours.png")
     plt.show()
     
     # avgScore = totalScore.mean()
