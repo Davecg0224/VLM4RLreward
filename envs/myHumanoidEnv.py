@@ -35,9 +35,9 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
         reset_noise_scale=1e-2,
         exclude_current_positions_from_observation=True,
         actionText = ["walking"],
-        step_penalty = -0.1,
-        onlyVLMreward = True,
         camera_config=None,
+        vlm_model_name = 'clip_feature_extractor',
+        vlm_model_version = "ViT-L-14",
         **kwargs
     ):
         utils.EzPickle.__init__(
@@ -50,8 +50,6 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
             reset_noise_scale,
             exclude_current_positions_from_observation,
             actionText,
-            step_penalty,
-            onlyVLMreward,
             **kwargs
         )
 
@@ -60,7 +58,6 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
         self._healthy_reward = healthy_reward
         self._terminate_when_unhealthy = terminate_when_unhealthy
         self._healthy_z_range = healthy_z_range
-        self._step_penalty = step_penalty
 
         self._reset_noise_scale = reset_noise_scale
 
@@ -68,13 +65,16 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
             exclude_current_positions_from_observation
         )
         self.actionText = actionText
-        self._onlyVLMreward = onlyVLMreward
         self.camera_config = camera_config
-        self._step_counter = 0
+        self._scoreList = [] 
+        self.vlm_model_name = vlm_model_name
+        self.vlm_model_version = vlm_model_version
 
         if exclude_current_positions_from_observation:
             observation_space = Box(
-                low=-np.inf, high=np.inf, shape=(317,), dtype=np.float64
+                # low=-np.inf, high=np.inf, shape=(317,), dtype=np.float64
+                # low=-np.inf, high=np.inf, shape=(320,), dtype=np.float64
+                low=-np.inf, high=np.inf, shape=(376,), dtype=np.float64
             )
         else:
             observation_space = Box(
@@ -91,8 +91,8 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
         )
 
         # init vlm
-        self.vlm = VLM(model_name='blip_feature_extractor', 
-                       model_version='base',
+        self.vlm = VLM(model_name=self.vlm_model_name, 
+                       model_version=self.vlm_model_version,
                        actionText=self.actionText)
 
     @property
@@ -143,42 +143,19 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
         )
 
     def step(self, action):
-        self._step_counter += 1
-        xy_position_before = mass_center(self.model, self.data)
         self.do_simulation(action, self.frame_skip)
 
         # render image for VLM reward
-        img = self.mujoco_renderer.render(render_mode = "rgb_array", camera_id = 0)
+        img = self.mujoco_renderer.render(render_mode = "rgb_array", camera_id = -1)
 
-        if self._onlyVLMreward:
-            reward = self.vlm.getScore(img) - self._step_penalty * self._step_counter
-            info = {}
-
+        score = self.vlm.getScore(img)
+        if self._scoreList == []:
+            reward = score
         else:
-            xy_position_after = mass_center(self.model, self.data)
-            xy_velocity = (xy_position_after - xy_position_before) / self.dt
-            x_velocity, y_velocity = xy_velocity
+            reward = abs(self._scoreList[-1] - score)
 
-            ctrl_cost = self.control_cost(action)
-
-            forward_reward = self._forward_reward_weight * x_velocity
-            healthy_reward = self.healthy_reward
-
-            reward = forward_reward + healthy_reward - ctrl_cost
-            reward += self.vlm.getScore(img)
-
-            info = {
-            "reward_linvel": forward_reward,
-            "reward_quadctrl": -ctrl_cost,
-            "reward_alive": healthy_reward,
-            "x_position": xy_position_after[0],
-            "y_position": xy_position_after[1],
-            "distance_from_origin": np.linalg.norm(xy_position_after, ord=2),
-            "x_velocity": x_velocity,
-            "y_velocity": y_velocity,
-            "forward_reward": forward_reward,
-            "vlm_reward": self.vlm.getScore(img),
-            }
+        self._scoreList.append(score)
+        info = {}
 
         observation = self._get_obs()
         terminated = self.terminated
@@ -188,7 +165,7 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
         return observation, reward, terminated, False, info
 
     def reset_model(self):
-        self._step_counter = 0
+        self._scoreList = []
         noise_low = -self._reset_noise_scale
         noise_high = self._reset_noise_scale
 
@@ -205,7 +182,7 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
 
     def viewer_setup(self):
         assert self.viewer is not None
-        for key, value in DEFAULT_CAMERA_CONFIG.items():
+        for key, value in self.camera_config.items():
             if isinstance(value, np.ndarray):
                 getattr(self.viewer.cam, key)[:] = value
             else:
