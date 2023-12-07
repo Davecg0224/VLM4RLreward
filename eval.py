@@ -28,12 +28,14 @@ def evaluation(env, model, eval_num=100):
 
 if __name__ == "__main__":
     task, algo_name, lr = my_config['run_id'], my_config["algorithm"].__name__, my_config["learning_rate"]
-    model_path = f"models/{task}/{algo_name}/3e-05_0"  # Change path to load different models
+    model_path = f"models/{task}/{algo_name}/3e-05_20"  # Change path to load different models
     
     env = gym.make('vlmHuman-v0', 
-                   healthy_z_range=(0.5, 2.0), 
+                   healthy_z_range=my_config["healthy_z_range"],
                    actionText=["Squatting down with knees bent and arms extended in front"], 
                    camera_config=DEFAULT_CAMERA_CONFIG,
+                   vlm_model_name=my_config["vlm_model_name"],
+                   vlm_model_version=my_config["vlm_model_version"],
                    render_mode="human",
                 )
 

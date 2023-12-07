@@ -17,6 +17,7 @@ import numpy as np
 register(
     id='vlmHuman-v0',
     entry_point='envs:VLMHumanoidEnv',
+    max_episode_steps = 100,
 )
 
 # Set camera configuration for the viewpoint
@@ -25,7 +26,7 @@ DEFAULT_CAMERA_CONFIG = {
     "distance": 3.5,
     "lookat": np.array((0.0, 0.0, 1.0)),
     "elevation": -10.0,
-    "azimuth": 120.0,
+    "azimuth": 135.0,
 }
 
 # Set hyper params (configurations) for training
@@ -39,19 +40,25 @@ my_config = {
     "learning_rate": 3e-5,
     "gamma": 0.99,
     "entropy_coef": 'auto',
-    "learning_starts": 100,
+    "learning_starts": 1000,
 
     "epoch_num": 200,
-    "timesteps_per_epoch": 10000,
+    "timesteps_per_epoch": 5000,
     "eval_episode_num": 10,
-    "eval_freq": 10
+    "eval_freq": 10,
+
+    "healthy_z_range": (0.1, 2.0),
+    "vlm_model_name": "blip_feature_extractor",
+    "vlm_model_version": "base",
 }
 
 def make_env():
     env = gym.make('vlmHuman-v0', 
-                   healthy_z_range=(0.45, 2.0), 
+                   healthy_z_range=my_config["healthy_z_range"],
                    actionText=["Squatting down with knees bent and arms extended in front"],
                    camera_config=DEFAULT_CAMERA_CONFIG,
+                   vlm_model_name=my_config["vlm_model_name"],
+                   vlm_model_version=my_config["vlm_model_version"],
                 #    render_mode="human",
                 )
     return env
@@ -89,13 +96,12 @@ def train(env, model, config):
                 while not done:
                     action, _state = model.predict(obs, deterministic=True)
                     obs, reward, done, info = env.step(action)
-                    # env.render()
 
                     avg_reward  += reward/config["eval_episode_num"]
             
-            print("Avg_reward: ", avg_reward) 
+            print("Avg_reward: ", np.round(avg_reward, 2) )
 
-            # )
+            
             # wandb.log(
             #     {"avg_reward": avg_reward}
             # )
@@ -114,14 +120,14 @@ if __name__ == "__main__":
     # print(my_config["run_id"])
     # Create wandb session (Uncomment to enable wandb logging)
     # run = wandb.init(
-    #     project="assignment_3",
+    #     project="rlfp",
     #     config=my_config,
     #     sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
     #     id=my_config["run_id"]
     # )
 
     env = DummyVecEnv([make_env])
-    
+
     # Create model from loaded config and train
     # Note: Set verbose to 0 if you don't want info messages
     model = my_config["algorithm"](
