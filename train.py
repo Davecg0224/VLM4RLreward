@@ -17,7 +17,7 @@ import numpy as np
 register(
     id='vlmHuman-v0',
     entry_point='envs:VLMHumanoidEnv',
-    max_episode_steps = 100,
+    # max_episode_steps = 100,
 )
 
 # Set camera configuration for the viewpoint
@@ -31,23 +31,24 @@ DEFAULT_CAMERA_CONFIG = {
 
 # Set hyper params (configurations) for training
 my_config = {
-    "run_id": "squating down",
+    "run_id": "squating",
 
     "algorithm": TQC,
     "policy_network": MlpPolicy,
     "save_path": "models",
 
-    "learning_rate": 3e-5,
-    "gamma": 0.99,
+    "learning_rate": 1e-5,
+    "gamma": 0.9,
     "entropy_coef": 'auto',
     "learning_starts": 1000,
 
-    "epoch_num": 200,
-    "timesteps_per_epoch": 5000,
+    "epoch_num": 2000,
+    "timesteps_per_epoch": 500,
+    "max_episode_steps": 100,
     "eval_episode_num": 10,
     "eval_freq": 10,
 
-    "healthy_z_range": (0.1, 2.0),
+    "healthy_z_range": (0.2, 2.0),
     "vlm_model_name": "blip_feature_extractor",
     "vlm_model_version": "base",
 }
@@ -55,8 +56,12 @@ my_config = {
 def make_env():
     env = gym.make('vlmHuman-v0', 
                    healthy_z_range=my_config["healthy_z_range"],
-                   actionText=["Squatting down with knees bent and arms extended in front"],
+                   actionText=[
+                                "Squatting down with knees bent and hips lowered",
+                                "Standing up with legs straight and hips raised",
+                            ],
                    camera_config=DEFAULT_CAMERA_CONFIG,
+                   max_episode_steps = my_config["max_episode_steps"],
                    vlm_model_name=my_config["vlm_model_name"],
                    vlm_model_version=my_config["vlm_model_version"],
                 #    render_mode="human",
@@ -112,7 +117,7 @@ def train(env, model, config):
                 current_best = avg_reward
                 save_path = config["save_path"]
                 algo_name, lr = config["algorithm"].__name__, config["learning_rate"]
-                model.save(f"{save_path}/{my_config['run_id']}/{algo_name}/{lr}_{epoch}")
+                model.save(f"{save_path}/{my_config['run_id']}/{algo_name}/2stage_{lr}_{epoch}")
 
             print("---------------")
 
