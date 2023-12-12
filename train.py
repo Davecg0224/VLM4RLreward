@@ -49,8 +49,8 @@ my_config = {
     "eval_freq": 10,
 
     "healthy_z_range": (0.2, 2.0),
-    "vlm_model_name": "blip_feature_extractor",
-    "vlm_model_version": "base",
+    "vlm_model_name": "blip2_image_text_matching",
+    "vlm_model_version": "pretrain",
 }
 
 def make_env():

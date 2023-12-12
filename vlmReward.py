@@ -2,28 +2,27 @@ import torch
 import cv2
 from PIL import Image
 import time 
-# from gpt import GPTh
+# from gpt import GPT
 import numpy as np
 
 import matplotlib.pyplot as plt
 from lavis.models import model_zoo, load_model_and_preprocess
 
 class VLM():
-    def __init__(self, model_name = 'clip_feature_extractor',  model_version = "ViT-L-14", actionText = ["walking"]):
+    def __init__(self, model_name = 'clip_feature_extractor',  model_version = "ViT-L-14", actionText = ["walking"], use_itm = False):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model_name = model_name
         self.model, self.vis_processors, self.txt_processors = load_model_and_preprocess(name = self.model_name, 
                                                                 model_type = model_version, 
                                                                 is_eval=True,
                                                                 device=self.device)
-        # actionText.append("not squatung and not standing")
-        # actionText.append("doing nothing")
-        self.text = [self.txt_processors["eval"](f"a human is {c}") for c in actionText]
+        self._use_itm = use_itm
+        # self.text = [self.txt_processors["eval"](f"a human is {c}") for c in actionText]
+        self.text = [self.txt_processors["eval"](c) for c in actionText]
 
     def getScore(self, img):
         img_pil = Image.fromarray(img)
         image = self.vis_processors["eval"](img_pil).unsqueeze(0).to(self.device)
-        sample = {"image": image, "text_input": self.text}
 
         if "clip" in self.model_name:
             clip_features = self.model.extract_features(sample)
@@ -34,6 +33,15 @@ class VLM():
             # score = (similarity + 1) / 2
             return similarity
         
+        if self._use_itm:
+            itm_scores = np.zeros(len(self.text))
+            for i, txt in enumerate(self.text):
+                sample = {"image": image, "text_input": txt}
+                itm_output = self.model(sample, match_head="itm")
+                itm_scores[i] = torch.nn.functional.softmax(itm_output, dim=1)[:, 1].item()
+            return itm_scores
+
+        sample = {"image": image, "text_input": self.text}
         features_image = self.model.extract_features(sample, mode="image")
         features_text = self.model.extract_features(sample, mode="text")
         similarity = (features_image.image_embeds_proj[:,0,:] @ features_text.text_embeds_proj[:,0,:].t())[0].cpu().numpy()
@@ -55,19 +63,27 @@ if __name__ == "__main__":
     # ]
     # actionList = llm.complete(prompts).split("/")
 
-    actionList = ["Squatting down with knees bent and arms extended in front",
-                  "Standing back up with legs straight and arms at the sides"
+    actionList = [
+                  "Squatting down with knees bent and hips lowered",
+                  "Standing up with legs straight and hips raised",
+                #   "Hips back and down, knees bent, thighs parallel to the floor",
+                #   "Return to standing with hips and knees extended",
+                #   "Hips lowered with knees bent and back straight",
+                #   "Hips raised with legs straightened and back upright",
+                #   "Hips back, knees bent, thighs parallel to the floor",
+                #   "Return to standing position with hips and knees fully extended, arms relaxed at sides"
                 ]
 
     # select VLM and model version
     # print(model_zoo) to check for available models
     vlm = VLM(
-              model_name = "blip_feature_extractor",
-              model_version = 'base', 
-              actionText=actionList
+              model_name = "blip2_image_text_matching",
+              model_version = 'pretrain', 
+              actionText=actionList,
+              use_itm = True,
             )
 
-    cap = cv2.VideoCapture('./videos/squating_blip_short.mp4')
+    cap = cv2.VideoCapture('./videos/squat_520.mp4')
     totalScore = []
     stTime = time.time()
     while cap.isOpened():
@@ -76,20 +92,20 @@ if __name__ == "__main__":
             # print("Ignoring empty camera frame.")
             # If loading a video, use 'break' instead of 'continue'.
             break
+        score = vlm.getScore(img)
         # r1, r2 = vlm.getScore(img)[0], vlm.getScore(img)[1]
-        totalScore.append(vlm.getScore(img))
-
+        totalScore.append(score)
 
     print("===================================")
-    print("first sub-pose", actionList[0])
-    print("second sub-pose", actionList[1])
+    # print("first sub-pose:", actionList[0], '\n')
+    # print("second sub-pose:", actionList[1], '\n')
 
     plt.plot(np.arange(len(totalScore)), totalScore)
     plt.legend(["squating", "standing"])
     plt.xlabel("Frame")
     plt.ylabel("Similarity Score")
     plt.title("Similarity Score of each frame")
-    plt.savefig("similarity_ours.png")
+    # plt.savefig("similarity_clip.png")
     plt.show()
     
     # avgScore = totalScore.mean()

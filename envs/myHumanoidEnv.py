@@ -96,7 +96,10 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
         # init vlm
         self.vlm = VLM(model_name=self.vlm_model_name, 
                        model_version=self.vlm_model_version,
-                       actionText=self.actionText)
+                       actionText=self.actionText,
+                       use_itm=True,
+                    )
+        
 
     @property
     def healthy_reward(self):
