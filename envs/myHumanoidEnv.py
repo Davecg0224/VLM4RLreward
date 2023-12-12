@@ -31,6 +31,7 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
         ctrl_cost_weight=0.1,
         healthy_reward=5.0,
         terminate_when_unhealthy=True,
+        max_episode_steps=1000,
         healthy_z_range=(1.0, 2.0),
         reset_noise_scale=1e-2,
         exclude_current_positions_from_observation=True,
@@ -58,6 +59,9 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
         self._healthy_reward = healthy_reward
         self._terminate_when_unhealthy = terminate_when_unhealthy
         self._healthy_z_range = healthy_z_range
+        self._stepCount = 0
+        self._prev_score = 0
+        self.max_episode_steps = max_episode_steps
 
         self._reset_noise_scale = reset_noise_scale
 
@@ -66,7 +70,6 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
         )
         self.actionText = actionText
         self.camera_config = camera_config
-        self._scoreList = [] 
         self.vlm_model_name = vlm_model_name
         self.vlm_model_version = vlm_model_version
 
@@ -143,29 +146,52 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
         )
 
     def step(self, action):
+        self._stepCount += 1
         self.do_simulation(action, self.frame_skip)
 
         # render image for VLM reward
         img = self.mujoco_renderer.render(render_mode = "rgb_array", camera_id = -1)
 
         score = self.vlm.getScore(img)
-        if self._scoreList == []:
-            reward = score
-        else:
-            reward = abs(self._scoreList[-1] - score)
+        s1, s2 = score[0], score[1]
 
-        self._scoreList.append(score)
-        info = {}
+        ## weighted-based
+        w = 1 - (self._stepCount / self.max_episode_steps)
+        weighted_score = s1*w + s2*(1-w)
+
+        ## switch-based
+        # selected_score = s1
+        # # chanege to sec. stage while reaches half of the max_episode_steps
+        # if self._stepCount >= self.max_episode_steps/2:
+        #     # reset self._prev_score once
+        #     # if self._stepCount == self.max_episode_steps/2:
+        #     #     self._prev_score = 0
+                
+        #     selected_score = s2
+
+        reward = weighted_score - self._prev_score
+
+        self._prev_score = weighted_score
+
+        info = {
+            "squating_score": s1,
+            "standing_score": s2,
+        }
 
         observation = self._get_obs()
-        terminated = self.terminated
+        
+        if self._stepCount > self.max_episode_steps:
+            terminated = True
+        else:
+            terminated = self.terminated
 
         if self.render_mode == "human":
             self.render()
         return observation, reward, terminated, False, info
 
     def reset_model(self):
-        self._scoreList = []
+        self._stepCount = 0
+        self._prev_score = 0
         noise_low = -self._reset_noise_scale
         noise_high = self._reset_noise_scale
 
