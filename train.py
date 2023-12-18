@@ -37,14 +37,14 @@ my_config = {
     "policy_network": MlpPolicy,
     "save_path": "models",
 
-    "learning_rate": 1e-5,
+    "learning_rate": 3e-5,
     "gamma": 0.9,
     "entropy_coef": 'auto',
     "learning_starts": 1000,
 
-    "epoch_num": 2000,
-    "timesteps_per_epoch": 500,
-    "max_episode_steps": 100,
+    "epoch_num": 1000,
+    "timesteps_per_epoch": 1000,
+    "max_episode_steps": 200,
     "eval_episode_num": 10,
     "eval_freq": 10,
 
@@ -58,7 +58,7 @@ def make_env():
                    healthy_z_range=my_config["healthy_z_range"],
                    actionText=[
                                 "Squatting down with knees bent and hips lowered",
-                                "Standing up with legs straight and hips raised",
+                                "Return to standing position with legs straight and hips raised",
                             ],
                    camera_config=DEFAULT_CAMERA_CONFIG,
                    max_episode_steps = my_config["max_episode_steps"],
@@ -117,7 +117,7 @@ def train(env, model, config):
                 current_best = avg_reward
                 save_path = config["save_path"]
                 algo_name, lr = config["algorithm"].__name__, config["learning_rate"]
-                model.save(f"{save_path}/{my_config['run_id']}/{algo_name}/2stage_{lr}_{epoch}")
+                model.save(f"{save_path}/{my_config['run_id']}/tanh/nodelta_{lr}_{epoch}")
 
             print("---------------")
 

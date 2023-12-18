@@ -23,6 +23,7 @@ class VLM():
     def getScore(self, img):
         img_pil = Image.fromarray(img)
         image = self.vis_processors["eval"](img_pil).unsqueeze(0).to(self.device)
+        sample = {"image": image, "text_input": self.text}
 
         if "clip" in self.model_name:
             clip_features = self.model.extract_features(sample)
@@ -30,8 +31,8 @@ class VLM():
             features_text = clip_features.text_embeds_proj
             similarity = (features_image @ features_text.t())[0].detach().cpu().numpy()
             # # [-1, 1] scaled to [0, 1]
-            # score = (similarity + 1) / 2
-            return similarity
+            score = (similarity + 1) / 2
+            return score
         
         if self._use_itm:
             itm_scores = np.zeros(len(self.text))
@@ -41,7 +42,6 @@ class VLM():
                 itm_scores[i] = torch.nn.functional.softmax(itm_output, dim=1)[:, 1].item()
             return itm_scores
 
-        sample = {"image": image, "text_input": self.text}
         features_image = self.model.extract_features(sample, mode="image")
         features_text = self.model.extract_features(sample, mode="text")
         similarity = (features_image.image_embeds_proj[:,0,:] @ features_text.text_embeds_proj[:,0,:].t())[0].cpu().numpy()
@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
     actionList = [
                   "Squatting down with knees bent and hips lowered",
-                  "Standing up with legs straight and hips raised",
+                  "Return to standing position with legs straight and hips raised",
                 #   "Hips back and down, knees bent, thighs parallel to the floor",
                 #   "Return to standing with hips and knees extended",
                 #   "Hips lowered with knees bent and back straight",
@@ -83,7 +83,7 @@ if __name__ == "__main__":
               use_itm = True,
             )
 
-    cap = cv2.VideoCapture('./videos/squat_520.mp4')
+    cap = cv2.VideoCapture('./videos/test.mp4')
     totalScore = []
     stTime = time.time()
     while cap.isOpened():
@@ -93,7 +93,6 @@ if __name__ == "__main__":
             # If loading a video, use 'break' instead of 'continue'.
             break
         score = vlm.getScore(img)
-        # r1, r2 = vlm.getScore(img)[0], vlm.getScore(img)[1]
         totalScore.append(score)
 
     print("===================================")
