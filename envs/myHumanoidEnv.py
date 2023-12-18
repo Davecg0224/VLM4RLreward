@@ -94,13 +94,13 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
         )
 
         # init vlm
-        self.vlm = VLM(model_name=self.vlm_model_name, 
-                       model_version=self.vlm_model_version,
-                       actionText=self.actionText,
-                       use_itm=True,
-                    )
+        if self.render_mode != "human":
+            self.vlm = VLM(model_name=self.vlm_model_name, 
+                        model_version=self.vlm_model_version,
+                        actionText=self.actionText,
+                        use_itm=True,
+                        )
         
-
     @property
     def healthy_reward(self):
         return (
@@ -151,17 +151,26 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
     def step(self, action):
         self._stepCount += 1
         self.do_simulation(action, self.frame_skip)
+        observation = self._get_obs()
+        
+        if self._stepCount > self.max_episode_steps:
+            terminated = True
+        else:
+            terminated = self.terminated
+
+        if terminated:
+            reward = -self._healthy_reward
+            return observation, reward, terminated, False, {}
+
+        if self.render_mode == "human":
+            self.render()
+            return observation, 0, terminated, False, {}
 
         # render image for VLM reward
         img = self.mujoco_renderer.render(render_mode = "rgb_array", camera_id = -1)
 
         score = self.vlm.getScore(img)
         s1, s2 = score[0], score[1]
-
-        ## weighted-based
-        w = 1 - (self._stepCount / self.max_episode_steps)
-        weighted_score = s1*w + s2*(1-w)
-
         ## switch-based
         # selected_score = s1
         # # chanege to sec. stage while reaches half of the max_episode_steps
@@ -172,24 +181,24 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
                 
         #     selected_score = s2
 
+        ## weighted-based
+        stepRatio = self._stepCount / self.max_episode_steps
+        w = 1 - stepRatio
+        w_exp = np.exp(-stepRatio * 10)
+        w_tanh = 1 - 0.5*(np.tanh(self._stepCount - self.max_episode_steps/2) + 1)
+        w_cos = 1 - 0.5*(np.cos(2*np.pi*stepRatio) + 1)
+        weighted_score = s1*w_tanh + s2*(1-w_tanh)
+        # reward = weighted_score
         reward = weighted_score - self._prev_score
 
         self._prev_score = weighted_score
 
         info = {
-            "squating_score": s1,
-            "standing_score": s2,
-        }
+            'squating_score': s1,
+            'standing_score': s2,
+            'weighted_score': weighted_score,
+        }            
 
-        observation = self._get_obs()
-        
-        if self._stepCount > self.max_episode_steps:
-            terminated = True
-        else:
-            terminated = self.terminated
-
-        if self.render_mode == "human":
-            self.render()
         return observation, reward, terminated, False, info
 
     def reset_model(self):
