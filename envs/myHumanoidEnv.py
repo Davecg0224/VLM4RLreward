@@ -60,7 +60,8 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
         self._terminate_when_unhealthy = terminate_when_unhealthy
         self._healthy_z_range = healthy_z_range
         self._stepCount = 0
-        self._prev_score = 0
+        self._prev_w_score = 0
+        self._prev_score = np.zeros(2)
         self.max_episode_steps = max_episode_steps
 
         self._reset_noise_scale = reset_noise_scale
@@ -158,19 +159,24 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
         else:
             terminated = self.terminated
 
-        if terminated:
+        if not self.is_healthy:
             reward = -self._healthy_reward
-            return observation, reward, terminated, False, {}
+            info = {
+                'squating_score': 0,
+                'standing_score': 0,
+                'DW_score': 0,
+                'WD_score': 0,
+            }   
+            return observation, reward, terminated, False, info
 
         if self.render_mode == "human":
             self.render()
             return observation, 0, terminated, False, {}
 
-        # render image for VLM reward
+        # render image for VLM scoring
         img = self.mujoco_renderer.render(render_mode = "rgb_array", camera_id = -1)
-
         score = self.vlm.getScore(img)
-        s1, s2 = score[0], score[1]
+
         ## switch-based
         # selected_score = s1
         # # chanege to sec. stage while reaches half of the max_episode_steps
@@ -181,29 +187,42 @@ class VLMHumanoidEnv(MujocoEnv, utils.EzPickle):
                 
         #     selected_score = s2
 
-        ## weighted-based
+        ## weighted baselines
         stepRatio = self._stepCount / self.max_episode_steps
-        w = 1 - stepRatio
+        w_lin = 1 - stepRatio
         w_exp = np.exp(-stepRatio * 10)
         w_tanh = 1 - 0.5*(np.tanh(self._stepCount - self.max_episode_steps/2) + 1)
         w_cos = 1 - 0.5*(np.cos(2*np.pi*stepRatio) + 1)
-        weighted_score = s1*w_tanh + s2*(1-w_tanh)
-        # reward = weighted_score
-        reward = weighted_score - self._prev_score
+        w = w_tanh
 
-        self._prev_score = weighted_score
+        ## delta-weighted based
+        weighted_score = score @ np.array([w, (1-w)*2])
+        delta_weighted_score = weighted_score - self._prev_w_score
+        self._prev_w_score = weighted_score
+        # reward = weighted_score - self._prev_score
+
+        ## weighted-delta based
+        weighted_delta_score = (score - self._prev_score) @ np.array([w, (1-w)])
+        self._prev_score = score
+        # reward = weighted_delta_score
+
+        ## reward selection
+        reward = weighted_score
 
         info = {
-            'squating_score': s1,
-            'standing_score': s2,
-            'weighted_score': weighted_score,
+            'squating_score': score[0],
+            'standing_score': score[1],
+            'DW_score': delta_weighted_score,
+            'WD_score': weighted_delta_score,
         }            
 
         return observation, reward, terminated, False, info
 
     def reset_model(self):
         self._stepCount = 0
-        self._prev_score = 0
+        self._prev_w_score = 0
+        self._prev_score = np.zeros(2)
+
         noise_low = -self._reset_noise_scale
         noise_high = self._reset_noise_scale
 
